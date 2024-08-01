@@ -13,6 +13,7 @@ import youtube from './sources/youtube.js'
 import genius from './sources/genius.js'
 import musixmatch from './sources/musixmatch.js'
 import flowery from './sources/flowery.js'
+import jiosaavn from "./sources/jiosaavn.js"
 import searchWithDefault from './sources/default.js'
 
 import { debugLog, http1makeRequest, makeRequest, loadHLS, loadHLSPlaylist } from './utils.js'
@@ -291,6 +292,13 @@ async function loadTracks(identifier) {
 
     if (config.search.sources.flowery && identifier.startsWith('flowery:'))
       return await flowery.loadFrom(identifier.replace('flowery:', ''))
+    
+    const jsSearch = config.search.sources.jiosaavn ? (identifier.startsWith('jssearch:') || identifier.startsWith('jsrec:')) : null
+    /**
+     * @todo Jiosaavn Regexp
+     */
+    if (config.search.sources.jiosaavn && jsSearch)
+      return await jiosaavn.search(identifier.replace(/jssearch:|jsrec:/, ''))
 
     debugLog('loadTracks', 1, { params: identifier, error: 'No possible search source found.' })
 
