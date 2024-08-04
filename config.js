@@ -142,13 +142,17 @@ export default {
         },
         enforceConfig: true // Doesn't allow the client to use custom values
       },
+      jiosaavn: {
+        enabled: true,
+        apiBaseUrl: 'https://saavn.dev/api', // JioSaavn API base URL. (Set Your own If using Self-Hosted Api Instance)
+      },
       musixmatch: {
         enabled: false,
         signatureSecret: 'DISABLED' // For legal reasons, this key is not provided.
       },
       genius: {
         enabled: true
-      }
+      },
     }
   },
   filters: {
