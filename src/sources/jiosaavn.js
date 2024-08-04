@@ -11,7 +11,84 @@ async function loadFrom() {}
 /**
  * @todo 
  */
-async function retrieveStream() {}
+async function retrieveStream(identifier, title) {
+
+        const audioQualityRange = [];
+        switch (config.audio.quality) {
+            case "lowest": {
+                audioQualityRange.push("12kbps")
+                break
+            }
+            case "low": {
+                audioQualityRange.push("48kbps")
+                break
+            }
+            case "medium": {
+                // If 160kbps is not available, then 96kbps is used, filtered later. (Creating medium quality)
+                audioQualityRange.push("160kbps", "96kbps")
+                break
+            }
+            case "high": {
+                audioQualityRange.push("320kbps")
+                break
+            }
+            default: {
+                audioQualityRange.push("320kbps")
+                break
+            }
+        }
+
+        const req = await makeRequest(`${config.search.sources.jiosaavn.apiBaseUrl}/songs/${encodeURIComponent(identifier)}`, { 
+            headers: {
+                "Content-Type": "application/json"
+            }
+        })
+
+        if(req.error || req.statusCode !== 200) {
+            const errMsg = req.error ? req.error.message : `JioSaavn ${req.statusCode === 404 ? `Requested Song Not found` : `Returned invalid`} status code: ${req.statusCode}`
+
+            debugLog('retrieveStream', 4, { type: 2, sourceName: 'JioSaavn', query: title, message: errMsg })
+
+            return {
+                exception: {
+                    message: errMsg,
+                    severity: 'fault',
+                    cause: 'Unknown'
+                }
+            }
+        }
+
+        const reqBody = req.body
+
+        if(!reqBody?.success) 
+            return {
+                exception: {
+                    message: `Something went Wrong while requesting to JioSaavn, Response: ${reqBody.data}`,
+                    severity: 'fault',
+                    cause: 'Unknown'
+                }
+            }
+
+        const fetchedTrack = reqBody.data[0]
+        const selectedDownloadUrl = audioQualityRange.find((quality) => fetchedTrack.downloadUrl.find((urlObj) => urlObj.quality === quality)).url || fetchedTrack.downloadUrl[fetchedTrack?.downloadUrl?.length - 1]?.url
+
+        if(!selectedDownloadUrl) {
+            debugLog('retrieveStream', 4, { type: 3, sourceName: 'JioSaavn', query: title, message: 'Track Not playable, no playable stream url found.' })
+            return {
+                exception: {
+                    message: 'Track Not playable, no playable stream url found.',
+                    severity: 'fault',
+                    cause: 'Unknown'
+                }
+            }
+        }
+
+        return {
+            url: selectedDownloadUrl,
+            protocol: 'https',
+            format: 'audio/mp4' // Not Preforming Another Request to get the format.
+        }
+}
 /**
  * Search for songs based on the provided identifier
  * @param {string} identifier 
