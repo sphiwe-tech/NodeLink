@@ -296,12 +296,9 @@ async function loadTracks(identifier) {
     if (config.search.sources.flowery && identifier.startsWith('flowery:'))
       return await flowery.loadFrom(identifier.replace('flowery:', ''))
     
-    const jsSearch = config.search.sources.jiosaavn ? (identifier.startsWith('jssearch:') || identifier.startsWith('jsrec:')) : null
-    /**
-     * @todo Jiosaavn Regexp
-     */
-    if (config.search.sources.jiosaavn && jsSearch)
-      return await jiosaavn.search(identifier.replace(/jssearch:|jsrec:/, ''))
+    const jsSourceCheckResult = jiosaavn.check(identifier)
+    if (config.search.sources.jiosaavn && jsSourceCheckResult)
+      return await jsSourceCheckResult && !Array.isArray(jsSourceCheckResult) ? jiosaavn.search(identifier.replace(/jssearch:|jsrec:/, '')) : jiosaavn.loadFrom(jsSourceCheckResult.type, jsSourceCheckResult.identifier, identifier)
 
     debugLog('loadTracks', 1, { params: identifier, error: 'No possible search source found.' })
 
