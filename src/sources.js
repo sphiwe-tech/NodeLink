@@ -87,6 +87,9 @@ async function getTrackURL(track, toDefault) {
           format
         }
       }
+      case 'jiosaavn': {
+        return jiosaavn.retrieveStream(track.identifier, track.title)
+      }
       default: {
         return {
           exception: {
@@ -167,7 +170,7 @@ function getTrackStream(decodedTrack, url, protocol, additionalData) {
         if (trueSource === 'soundcloud' && additionalData)
           trueSource = config.search.fallbackSearchSource
 
-        const res = await ((trueSource === 'youtube' || trueSource === 'ytmusic') ? http1makeRequest : makeRequest)(url, {
+        const res = await ((trueSource === 'youtube' || trueSource === 'ytmusic' || trueSource === 'jiosaavn') ? http1makeRequest : makeRequest)(url, {
           method: 'GET',
           streamOnly: true
         })

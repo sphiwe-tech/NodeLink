@@ -1,5 +1,3 @@
-import { URL } from 'node:url'
-
 import config from '../../config.js'
 
 import { debugLog, encodeTrack, makeRequest } from '../utils.js'
@@ -8,9 +6,6 @@ import { debugLog, encodeTrack, makeRequest } from '../utils.js'
  */
 async function loadFrom() {}
 
-/**
- * @todo 
- */
 async function retrieveStream(identifier, title) {
 
         const audioQualityRange = [];
