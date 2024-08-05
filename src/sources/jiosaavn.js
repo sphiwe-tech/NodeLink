@@ -15,17 +15,17 @@ function check(identifier) {
 /**
  * @todo
  */
-async function loadFrom(type, identifier, url) {
+async function loadFrom(type, url) {
 
-    if (!type || !identifier) {
-        debugLog('loadtracks', 4, { type: 3, loadType: 'error', sourceName: 'jioSaavn', query: url, message: `Unable to extract url type & identifier from ${url}, Received type: ${type}, identifier: ${identifier}` })
+    if (!type || !url) {
+        debugLog('loadtracks', 4, { type: 3, loadType: 'error', sourceName: 'jioSaavn', query: url, message:`Unable to extract url type from ${url}, Received type: ${type}` })
 
         return {
             loadType: "error",
             data: {
-                message: `Unable to extract url type & identifier from ${url}, Received type: ${type}, identifier: ${identifier}`,
+                message: `Unable to extract url type from ${url}, Received type: ${type}`,
                 severity: 'fault',
-                cause: "Data extraction didn't give required keys/values (type, identifier)"
+                cause: "Data extraction didn't give required keys/values (type)"
             }
         }
     }
@@ -35,19 +35,19 @@ async function loadFrom(type, identifier, url) {
 
     switch (type) {
         case "song": {
-            endpoint = `/songs/${encodeURIComponent(identifier)}`
+            endpoint = `/songs?link=${encodeURIComponent(url)}`
             break
         }
         case "album": {
-            endpoint = `/albums?id=${encodeURIComponent(identifier)}`
+            endpoint = `/albums?link=${encodeURIComponent(url)}`
             break
         }
         case "featured": {
-            endpoint = `/playlists?id=${encodeURIComponent(identifier)}&page=0&limit=${limit}`
+            endpoint = `/playlists?link=${encodeURIComponent(url)}&page=0&limit=${limit}`
             break
         }
         default: {
-            debugLog('loadtracks', 4, { type: 3, loadType: type[1], sourceName: 'JioSaavn', query: identifier, message: 'No matches found.' })
+            debugLog('loadtracks', 4, { type: 3, loadType: type, sourceName: 'JioSaavn', query: url, message: 'No matches found.' })
 
             return {
                 loadType: 'empty',
@@ -56,7 +56,7 @@ async function loadFrom(type, identifier, url) {
         }
     }
 
-    debugLog('loadtracks', 4, { type: 1, loadType: type[1], sourceName: 'JioSaavn', query: url })
+    debugLog('loadtracks', 4, { type: 1, loadType: type, sourceName: 'JioSaavn', query: url })
 
     const req = await makeRequest(`${config.search.sources.jiosaavn.apiBaseUrl}${endpoint}`, {
         headers: {
@@ -67,7 +67,7 @@ async function loadFrom(type, identifier, url) {
     if (req.error || req.statusCode !== 200) {
         const errMsg = req.error ? req.error.message : `JioSaavn ${req.statusCode === 404 ? `No matches Found.` : `Returned invalid`} status code: ${req.statusCode}`
 
-        debugLog('loadtracks', 4, { type: 3, loadType: type[1], sourceName: 'Spotify', query: url, message: errMsg })
+        debugLog('loadtracks', 4, { type: 3, loadType: type, sourceName: 'JioSaavn', query: url, message: errMsg })
 
         return {
             loadType: 'empty',
@@ -77,17 +77,62 @@ async function loadFrom(type, identifier, url) {
 
     const reqBody = req.body
 
-    if (!(body?.data || body?.success))
+    if (!(reqBody?.data || reqBody?.success))
         return {
             loadType: "error",
             data: {
-                message: `Something went Wrong while requesting to JioSaavn, Response: ${reqBody.data}`,
+                message: `Something went Wrong while requesting to JioSaavn, Response: ${JSON.stringify(reqBody.data)}`,
                 severity: 'fault',
                 cause: 'Unknown'
             }
         }
-    
-    
+
+    const tracks = []
+
+    switch (type) {
+      case "song": {
+       tracks.push(buildTrack(reqBody.data[0])) 
+       
+       debugLog('loadtracks', 4, { type: 2, loadType: 'track', sourceName: 'JioSaavn', track: buildTrack(reqBody.data[0]).info, query: url })
+       break
+      }
+      case "album": {
+       reqBody.data.songs.forEach((trackData) => tracks.push(buildTrack(trackData)))
+
+       if(reqBody.data?.songCount > limit) tracks.length = reqBody.data?.songCount ?? tracks.length;
+
+       debugLog('loadtracks', 4, { type: 2, loadType: 'playlist', sourceName: 'JioSaavn', playlistName: reqBody.data?.name })
+       break
+      }
+      //case "featured": {
+      //
+      //}
+      //default:
+      //  break;
+    }
+
+    if(!tracks.length) 
+      return {
+       loadType: 'empty',
+       data: {}
+      }
+
+    return {
+      loadType: type === 'song' ? 'track' : type === 'album' ?
+      'album' : type,
+      data: type === 'album' ? {
+         info: {
+          name: reqBody.data?.name,
+          artworkUrl: reqBody.data.image[reqBody.data.image.length - 1].url,
+          selectedTrack: 0
+         },
+         pluginInfo: {},
+         tracks,
+       } : {
+         pluginInfo: {},
+         tracks,
+        }
+    }
 }
 
 async function retrieveStream(identifier, title) {
@@ -142,7 +187,7 @@ async function retrieveStream(identifier, title) {
     if (!reqBody?.success)
         return {
             exception: {
-                message: `Something went Wrong while requesting to JioSaavn, Response: ${reqBody.data}`,
+                message: `Something went Wrong while requesting to JioSaavn, Response: ${JSON.stringify(reqBody.data)}`,
                 severity: 'fault',
                 cause: 'Unknown'
             }
@@ -234,8 +279,32 @@ async function search(identifier) {
     })
 }
 
+function buildTrack(trackData) {
+  const trackInfo = {
+      identifier: trackData.id,
+      isSeekable: true,
+      author: trackData.artists.primary ? trackData.artists.primary.map((artist) => artist.name).join(', ') : null,
+      length: trackData.duration * 1000,
+      isStream: false,
+      position: 0,
+      title: trackData.name,
+      uri: trackData.url,
+      artworkUrl: trackData.image[trackData.image.length - 1]?.url ?? null,
+      isrc: null,
+      sourceName: 'jiosaavn'
+  }
+
+
+  return {
+    encoded: encodeTrack(trackInfo),
+    info: trackInfo,
+    pluginInfo: {}
+  }
+}
+
 export default {
     loadFrom,
     retrieveStream,
-    search
+    search,
+    check
 }
