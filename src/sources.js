@@ -298,7 +298,7 @@ async function loadTracks(identifier) {
     
     const jsSourceCheckResult = jiosaavn.check(identifier)
     if (config.search.sources.jiosaavn && jsSourceCheckResult)
-      return await jsSourceCheckResult && !Array.isArray(jsSourceCheckResult) ? jiosaavn.search(identifier.replace(/jssearch:|jsrec:/, '')) : jiosaavn.loadFrom(jsSourceCheckResult.groups?.type, jsSourceCheckResult.groups?.identifier, identifier)
+      return await jsSourceCheckResult && !Array.isArray(jsSourceCheckResult) ? jiosaavn.search(identifier.replace(/jssearch:|jsrec:/, '')) : jiosaavn.loadFrom(jsSourceCheckResult.groups?.type, identifier)
 
     debugLog('loadTracks', 1, { params: identifier, error: 'No possible search source found.' })
 

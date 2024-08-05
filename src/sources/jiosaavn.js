@@ -104,11 +104,13 @@ async function loadFrom(type, url) {
        debugLog('loadtracks', 4, { type: 2, loadType: 'playlist', sourceName: 'JioSaavn', playlistName: reqBody.data?.name })
        break
       }
-      //case "featured": {
-      //
-      //}
-      //default:
-      //  break;
+      case "featured": {
+        reqBody.data.songs.forEach((trackData) => tracks.push(buildTrack(trackData)))
+        if(reqBody.data?.songCount > limit) tracks.length = reqBody.data?.songCount ?? tracks.length;
+        
+        debugLog('loadtracks', 4, { type: 2, loadType: 'playlist', sourceName: 'JioSaavn', playlistName: reqBody.data?.name })
+        break
+      }
     }
 
     if(!tracks.length) 
@@ -119,8 +121,8 @@ async function loadFrom(type, url) {
 
     return {
       loadType: type === 'song' ? 'track' : type === 'album' ?
-      'album' : type,
-      data: type === 'album' ? {
+      'album' : type === 'featured' ? 'playlist' : type,
+      data: type === 'album' || type === 'featured' ? {
          info: {
           name: reqBody.data?.name,
           artworkUrl: reqBody.data.image[reqBody.data.image.length - 1].url,
@@ -128,10 +130,10 @@ async function loadFrom(type, url) {
          },
          pluginInfo: {},
          tracks,
-       } : {
-         pluginInfo: {},
-         tracks,
-        }
+       } : type === 'song' ? tracks[0] : {
+        pluginInfo: {},
+        tracks,
+       }
     }
 }
 
@@ -206,6 +208,8 @@ async function retrieveStream(identifier, title) {
             }
         }
     }
+
+    debugLog('retrieveStream', 4, { type: 1, sourceName: 'JioSaavn', query: title })
 
     return {
         url: selectedDownloadUrl,
@@ -283,7 +287,9 @@ function buildTrack(trackData) {
   const trackInfo = {
       identifier: trackData.id,
       isSeekable: true,
-      author: trackData.artists.primary ? trackData.artists.primary.map((artist) => artist.name).join(', ') : null,
+      author: trackData.artists.primary 
+            ? trackData.artists.primary.map((artist) => artist.name).join(', ') 
+            : null,
       length: trackData.duration * 1000,
       isStream: false,
       position: 0,
