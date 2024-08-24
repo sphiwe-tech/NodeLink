@@ -15,7 +15,7 @@ function check(identifier) {
 /**
  * @todo
  * TODO: Handling of URL redirects.
- * TODO: Artist's Top Tracks.
+ * TODO: Artist's Top Tracks. (Testing Pending)
  */
 async function loadFrom(type, url) {
 
@@ -119,6 +119,15 @@ async function loadFrom(type, url) {
         debugLog('loadtracks', 4, { type: 2, loadType: 'playlist', sourceName: 'JioSaavn', playlistName: reqBody.data?.name })
         break
       }
+
+      case "artist": {
+        reqBody.data.topSongs?.forEach((trackData) => tracks.push(buildTrack(trackData)))
+        if(tracks.length > limit) tracks.length = limit;
+
+        debugLog('loadtracks', 4, { type: 2, loadType: 'artist', sourceName: 'JioSaavn', playlistName: reqBody.data?.name })
+        break
+      }
+
     }
 
     if(!tracks.length) 
@@ -128,11 +137,13 @@ async function loadFrom(type, url) {
       }
 
     return {
-      loadType: type === 'song' ? 'track' : type === 'album' ?
-      'album' : type === 'featured' ? 'playlist' : type,
-      data: type === 'album' || type === 'featured' ? {
+      loadType: type === 'song' ? 'track' : 
+                type === 'album' ? 'album' 
+                : type === 'featured' ? 'playlist' 
+                : type,
+      data: type === 'album' || type === 'featured' || type === 'artist' ? {
          info: {
-          name: reqBody.data?.name,
+          name: `${reqBody.data?.name}${type === 'artist' ? `'s Top Tracks` : ''}`,
           artworkUrl: reqBody.data.image[reqBody.data.image.length - 1].url,
           selectedTrack: 0
          },
