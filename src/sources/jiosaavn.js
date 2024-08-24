@@ -14,6 +14,8 @@ function check(identifier) {
 
 /**
  * @todo
+ * TODO: Handling of URL redirects.
+ * TODO: Artist's Top Tracks.
  */
 async function loadFrom(type, url) {
 
@@ -46,6 +48,12 @@ async function loadFrom(type, url) {
             endpoint = `/playlists?link=${encodeURIComponent(url)}&page=0&limit=${limit}`
             break
         }
+
+        case "artist": {
+            endpoint: `/artists?link=${encodeURIComponent(url)}&page=0&limit=${limit}`
+            break
+        }
+
         default: {
             debugLog('loadtracks', 4, { type: 3, loadType: type, sourceName: 'JioSaavn', query: url, message: 'No matches found.' })
 
@@ -221,6 +229,7 @@ async function retrieveStream(identifier, title) {
  * Search for songs based on the provided identifier
  * @param {string} identifier 
  * @see https://saavn.dev/docs#/tag/search/GET/api/search/songs Data/Response Structure
+ * TODO: Add Retrieve song suggestions
  */
 async function search(identifier) {
 
@@ -264,7 +273,7 @@ async function search(identifier) {
                 isrc: null,
                 sourceName: 'jiosaavn'
             }
-
+            // TODO: Use buildTrack Utility
             tracks.push({
                 encoded: encodeTrack(track),
                 info: track,
@@ -282,7 +291,28 @@ async function search(identifier) {
         })
     })
 }
-
+/**
+ * @param {object} trackData 
+ * @returns { 
+ *  {
+ *  encoded: string
+ *  info: {
+ *    identifier: string
+ *    isSeekable: boolean
+ *    author: string
+ *    length: number
+ *    isStream: boolean
+ *    position: number
+ *    title: string
+ *    uri: string
+ *    artworkUrl: string
+ *    isrc: null
+ *    sourceName: string
+ *  },
+ *  pluginInfo: {}
+ *  }
+ * }
+ */
 function buildTrack(trackData) {
   const trackInfo = {
       identifier: trackData.id,
